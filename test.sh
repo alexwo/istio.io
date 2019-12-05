@@ -89,5 +89,5 @@ function clean_bpm_fix(){
 if test -f "/var/vcap/jobs/bpm/bin/bpm"; then
     add_bpm
 else
-   # clean_bpm_fix
+   echo "nothing to do"
 fi
