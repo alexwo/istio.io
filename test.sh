@@ -13,21 +13,21 @@ function add_bpm(){
 cat > /var/vcap/jobs/bpm_fix/bin/bpm_fix <<'EOF'
 #!/bin/bash
 set -e
-#version 1.02
-mkdir -p /var/vcap/sys/log/bpm_monitor
-exec 3>&1 1>>/var/vcap/sys/log/bpm_monitor/bpm_monitor 2>&1
+#version 1.01
 RUN_DIR=/var/vcap/sys/run/bpm_fix
 PIDFILE=$RUN_DIR/bpm_fix.pid
 monit=/var/vcap/bosh/bin/monit
 sudo=/usr/bin/sudo
-
+recreate=false
 case $1 in
 
   start)
     mkdir -p $RUN_DIR
     echo $$ > $PIDFILE
-        while true; do
-                processes=$(/var/vcap/bosh/bin/monit summary | egrep "Execution failed|not monitored" | grep "Process" | awk '{print $2}'| tr -d \')
+    echo "sleeping for 3 mintues to allow vm regular startup"
+    sleep 3m
+    while true; do
+                processes=$(monit summary | egrep "Execution failed|not monitored" | grep "Process" | awk '{print $2}'| tr -d \')
                    if [ -z "$processes" ]; then
                            echo "no failed processes"
                            continue
@@ -40,20 +40,25 @@ case $1 in
                            continue
                       fi
 
-                         state_directory="/var/vcap/data/bpm/runc/bpm-${process}"
+                         state_directory="/var/vcap/data/bpm/runc/bpm-${process}*"
                          state_file="${state_directory}/state.json"
                          echo "checking whether state file $state_file exists"
                          if [[ -d "$state_directory" &&  -s "$state_file" ]]
                          then
                            echo "state file is ok, $state_file"
                          else
-                           echo "state file is corrupted, removing state directory: $state_directory"
-                           sudo rm -rf $state_directory
-                           /var/vcap/jobs/bpm/bin/bpm start $process
-                           monit restart $process
+                            recreate=true
                          fi
                         done
           sleep 1m
+             if [ "$recreate" = true ]; then
+
+               echo "We will clean and re-create the bpm state and allow monit to take care of everything else"
+                rm -rf /var/vcap/data/bpm/runc
+               /var/vcap/jobs/bpm/bin/bpm list | awk '{ print $1 }' |tail -n +2 | xargs -L1  bpm start
+               /var/vcap/jobs/bpm/bin/bpm list | awk '{ print $1 }' |tail -n +2 | xargs -L1  bpm stop
+               /var/vcap/bosh/bin/monit restart all
+             fi
          done
  ;;
 
@@ -93,5 +98,5 @@ function clean_bpm_fix(){
 if test -f "/var/vcap/jobs/bpm/bin/bpm"; then
     add_bpm
 else
-    echo "nothing to do"
+    clean_bpm_fix
 fi
