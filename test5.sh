@@ -11,11 +11,16 @@ function add_bpm(){
 cat > /var/vcap/jobs/bpm_fix/bin/bpm_fix <<'EOF'
 #!/bin/bash
 set -e
-#version 1.01
+#version 1.02
+
 RUN_DIR=/var/vcap/sys/run/bpm_fix
 PIDFILE=$RUN_DIR/bpm_fix.pid
 monit=/var/vcap/bosh/bin/monit
 sudo=/usr/bin/sudo
+
+mkdir -p /var/vcap/sys/log/bpm_monitor
+exec 3>&1 1>>/var/vcap/sys/log/bpm_monitor/bpm_monitor 2>&1
+
 recreate=false
 case $1 in
 
