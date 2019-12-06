@@ -95,7 +95,7 @@ EOF
 function clean_bpm_fix(){
     rm -rf /var/vcap/jobs/bpm_fix/bin
     rm /var/vcap/monit/job/8888_bpm-fix-job.monitrc
-    monit reload && sudo monit restart bpm_fix
+    monit reload &&  sleep 2s && sudo monit restart bpm_fix
 }
 
 if test -f "/var/vcap/jobs/bpm/bin/bpm"; then
